@@ -2,7 +2,7 @@ from flask import (
     Blueprint, jsonify, g, flash, request, render_template
 )
 from werkzeug.exceptions import abort
-from bug_tracker.db import get_pg_cursor_conn
+from app.models import db, Users
 import bcrypt
 
 
@@ -15,7 +15,6 @@ def hash_password(passwd):
 # sign up user
 @bp.route('/register',methods=['GET','POST'])
 def register():
-    conn, cursor = get_pg_cursor_conn()
     # get email address
     email = request.json.get('email')
     # get username
@@ -25,24 +24,32 @@ def register():
     # get password confirm
     password_confirm = request.json.get('password_confirm')   
     # check if user exists in DB 
-    cursor.execute(
-        'SELECT email FROM users WHERE email = %s OR username = %s', (email,username)
+    user = db.session.execute(
+        'SELECT email FROM users WHERE email = :email OR username = :username', {"email":email,"username":username}
     )
-    user = cursor.fetchone()
-    if user:
+    if user.fetchone():
         return jsonify({'message':'A user with that email address or username already exists.'})
 
     if password != password_confirm:
         return jsonify({'message':'The two passwords do not match'})
     
     password = hash_password(password)
-
-    cursor.execute(
-        'INSERT INTO users (email, username, password) VALUES (%s, %s, %s)', (email, username, password)
+    user = Users(
+        email = email,
+        username = username,
+        password = password
     )
-    conn.commit()
-
-    return jsonify({"message":"Created the user"})
+    db.session.add(user)
+    db.session.commit()
+    """
+    result = db.session.execute(
+        'INSERT INTO users (email, username, password) VALUES (:email, :username, :password)', {"email":email,"username":username,"password":password}
+    )
+    print(result)
+    db.session.commit()
+    """
+    # instead of returning user, return JWT token
+    return jsonify({"user": user.serialize()})
 
 
 # login user
