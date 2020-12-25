@@ -37,7 +37,7 @@ class TestAuthBlueprint(BaseCase):
         data = json.loads(response.data.decode())
         self.assertEqual(data['message'],'A user with that email address or username already exists.')
     
-    def test_register_password(self):
+    def test_register_password_mismatch(self):
         response = passwordMismatch(self)
         data = json.loads(response.data.decode())
         self.assertEqual(data['message'],'The two passwords do not match')

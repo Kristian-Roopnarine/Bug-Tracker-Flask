@@ -9,6 +9,7 @@ import bcrypt
 bp = Blueprint('auth',__name__,url_prefix='/auth')
 
 def hash_password(passwd):
+    # this is probably taking long
     salt = bcrypt.gensalt()
     return bcrypt.hashpw(passwd.encode('utf-8'),salt)
 
