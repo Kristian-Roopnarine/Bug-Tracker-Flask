@@ -8,13 +8,12 @@ from flask.cli import with_appcontext
 
 load_dotenv()
 
-db_name = os.getenv("DB_NAME")
-db_user = os.getenv("DB_USER")
-db_pass = os.getenv("DB_PASS")
+db_name = os.getenv("DEV_DB")
+
 
 def get_pg_cursor_conn():
     if 'conn' not in g:
-        g.conn = psycopg2.connect(dbname=db_name, user=db_user, password=db_pass)
+        g.conn = psycopg2.connect(dbname=db_name)
     if 'cursor' not in g:
         g.cursor = g.conn.cursor()
         
@@ -38,7 +37,7 @@ def init_db():
 
 def init_test_db():
     db_name = os.getenv("TEST_DB")
-    g.conn = psycopg2.connect(dbname=db_name, user=db_user, password=db_pass)
+    g.conn = psycopg2.connect(dbname=db_name)
     g.cursor = g.conn.cursor()
     with open('app/schema.sql','r') as sql_file:
         g.cursor.execute(sql_file.read())
