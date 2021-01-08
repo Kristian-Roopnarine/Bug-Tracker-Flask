@@ -3,6 +3,9 @@ from flask import (
 )
 from sqlalchemy import or_
 from werkzeug.exceptions import abort
+from flask_jwt_extended import (
+    jwt_required, create_access_token, get_jwt_identity, get_jwt_claims
+)
 from app.models import db, Users
 import bcrypt
 
@@ -27,11 +30,6 @@ def register():
     password_confirm = request.json.get('password_confirm')   
     # check if user exists in DB 
     user = Users.query.filter(or_(Users.username==username,Users.email==email)).first()
-    """
-    user = db.session.execute(
-        'SELECT email FROM users WHERE email = :email OR username = :username', {"email":email,"username":username}
-    )
-    """
     if user:
         return jsonify({'message':'A user with that email address or username already exists.'})
 
@@ -47,7 +45,8 @@ def register():
     db.session.add(user)
     db.session.commit()
     # instead of returning user, return JWT token
-    return jsonify({"user": user.serialize()})
+    access_token = create_access_token(identity=user)
+    return jsonify({'access_token':access_token,"message":"Account created"})
 
 
 # login user
@@ -61,7 +60,7 @@ def login():
     user = Users.query.filter_by(email=email).first()
     # if no user exists then return error
     if user is None:
-        return jsonify({'message':'Invalid username or password'})
+        return jsonify({'message':'Invalid email or password'})
 
     encoded_pass = password.encode('utf-8')
     user_pass = user.password.encode('utf-8')
@@ -69,8 +68,9 @@ def login():
 
     if bcrypt.checkpw(encoded_pass, user_pass):
         # return JWT token
-        return jsonify({'message':'Login success'})
-        
+        access_token = create_access_token(identity=user)
+        return jsonify({'message':'Login success','access_token':access_token})
+
     # return error
-    return jsonify({'message':'Invalid password'})
+    return jsonify({'message':'Invalid email or password'})
         

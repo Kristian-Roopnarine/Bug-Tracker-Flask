@@ -1,5 +1,6 @@
 import json
 import unittest
+from flask_jwt_extended import get_jwt_claims,get_jwt_identity
 from app.models import Users
 
 from base import BaseCase
@@ -32,7 +33,18 @@ def loginUser(self, email="bob@gmail.com",password="123"):
         )
     ),content_type="application/json")
 
+def getJWT(self):
+    response = loginUser(self)
+    data = json.loads(response.data.decode())
+    return data['access_token']
+
+def jwt_test_route(self, token):
+    return self.client.get('/jwt-test',headers={
+        'Authorization':'Bearer {}'.format(token)
+    },content_type="application/json")
+
 class TestAuthBlueprint(BaseCase):
+
     def test_register_unique_user(self):
         response = createUser(self)
         user = Users.query.get("2")
@@ -54,6 +66,22 @@ class TestAuthBlueprint(BaseCase):
         response = loginUser(self)
         data = json.loads(response.data.decode())
         self.assertEqual(data['message'],'Login success')
+    
+    def test_login_fail_incorrect_email(self):
+        response = loginUser(self,email="asdfasdf@gmail.com")
+        data = json.loads(response.data.decode())
+        self.assertEqual(data['message'],"Invalid email or password")
+    
+    def test_login_fail_incorrect_password(self):
+        response = loginUser(self,password="12")
+        data = json.loads(response.data.decode())
+        self.assertEqual(data['message'],"Invalid email or password")
+    
+    def test_protected_route_with_token(self):
+        token = getJWT(self)
+        response = jwt_test_route(self, token)
+        data = json.loads(response.data.decode())
+        self.assertEqual(data['message'],True)
 
 if __name__ == "__main__":
     unittest.main()
