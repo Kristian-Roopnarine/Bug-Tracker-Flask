@@ -12,7 +12,7 @@ bp = Blueprint('auth',__name__,url_prefix='/auth')
 def hash_password(passwd):
     # this is probably taking long
     salt = bcrypt.gensalt()
-    return bcrypt.hashpw(passwd.encode('utf-8'),salt)
+    return bcrypt.hashpw(passwd.encode('utf-8'),salt).decode('utf-8')
 
 # sign up user
 @bp.route('/register',methods=['GET','POST'])
@@ -26,7 +26,7 @@ def register():
     # get password confirm
     password_confirm = request.json.get('password_confirm')   
     # check if user exists in DB 
-    user = Users.query.filter_by(or_(username=username,email=email)).first()
+    user = Users.query.filter(or_(Users.username==username,Users.email==email)).first()
     """
     user = db.session.execute(
         'SELECT email FROM users WHERE email = :email OR username = :username', {"email":email,"username":username}
@@ -63,11 +63,14 @@ def login():
     if user is None:
         return jsonify({'message':'Invalid username or password'})
 
+    encoded_pass = password.encode('utf-8')
+    user_pass = user.password.encode('utf-8')
     # compare password with hashed password
-    if bcrypt.checkpw(password.encode('utf-8'), user.password):
+
+    if bcrypt.checkpw(encoded_pass, user_pass):
+        # return JWT token
         return jsonify({'message':'Login success'})
-
+        
+    # return error
     return jsonify({'message':'Invalid password'})
-        # if password does not match, return error
-
-        # password matches then return JWT
+        
