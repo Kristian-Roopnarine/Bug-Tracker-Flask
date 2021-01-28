@@ -15,7 +15,7 @@ def create_app(testing=False):
     app.config['JWT_SECRET_KEY']= "testingsecret"    
     jwt = JWTManager(app)
 
-    from .views import auth
+    from .views import auth, user
     from . import models
 
     """ 
@@ -41,9 +41,11 @@ def create_app(testing=False):
         app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("DEV_DB")
 
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    app.config['FRONTEND_URL'] = 'http://localhost:3000/'
     
     db.init_app(app)    
     app.register_blueprint(auth.bp)
+    app.register_blueprint(user.bp)
 
     @app.route('/',methods=['GET'])
     def index():
