@@ -28,8 +28,6 @@ def change_password():
     user.password = create_password_hash(new_password)
     db.session.commit()
 
-    # TODO: blacklist JWT token
-
     return jsonify({'message':'Successfully updated your password! Please relog.'})
 
 

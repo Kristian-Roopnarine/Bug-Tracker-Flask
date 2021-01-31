@@ -1,22 +1,44 @@
 from flask import Flask,jsonify
 from flask_sqlalchemy import SQLAlchemy
-from flask_jwt_extended import JWTManager,jwt_required, get_jwt_identity, get_jwt_claims
+from flask_jwt_extended import (
+    JWTManager,jwt_required, get_jwt_identity, get_jwt_claims,)
 from .utils import create_data
 from dotenv import load_dotenv
 import os
 
 load_dotenv()
 db = SQLAlchemy()
+blacklist = set()
 
 
 def create_app(testing=False):
 
     app = Flask(__name__,instance_relative_config=False)
-    app.config['JWT_SECRET_KEY']= "testingsecret"    
+    app.config['JWT_SECRET_KEY']= "testingsecret"   
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    app.config['FRONTEND_URL'] = 'http://localhost:3000/'
+    
+    app.config['JWT_BLACKLIST_ENABLED'] =True
+    app.config['JWT_BLACKLIST_TOKEN_CHECKS'] = ['access','refresh'] 
+
+    if testing:
+        app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("TEST_DB")
+    else:
+        app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("DEV_DB")
+
     jwt = JWTManager(app)
 
     from .views import auth, user
     from . import models
+    db.init_app(app)    
+    app.register_blueprint(auth.bp)
+    app.register_blueprint(user.bp)
+
+    # A storage engine to save revoked tokens. In production if speed is of concern, then Redis is a good bet. If data persistence is important then postgres is a good option. This is an in memory storage option.
+    @jwt.token_in_blacklist_loader
+    def check_if_token_in_blacklist(decrypted_token):
+        jti = decrypted_token['jti']
+        return jti in blacklist
 
     """ 
     Create a function that will be called whenever 
@@ -35,17 +57,7 @@ def create_app(testing=False):
     def user_identity_loader(user):
         return user.email
 
-    if testing:
-        app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("TEST_DB")
-    else:
-        app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("DEV_DB")
-
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    app.config['FRONTEND_URL'] = 'http://localhost:3000/'
     
-    db.init_app(app)    
-    app.register_blueprint(auth.bp)
-    app.register_blueprint(user.bp)
 
     @app.route('/',methods=['GET'])
     def index():

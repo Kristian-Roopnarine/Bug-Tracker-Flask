@@ -1,12 +1,13 @@
 from flask import (
-    Blueprint, jsonify, g, flash, request, render_template
+    Blueprint, jsonify, g, flash, request, render_template,current_app
 )
 from sqlalchemy import or_
 from werkzeug.exceptions import abort
 from flask_jwt_extended import (
-    jwt_required, create_access_token, get_jwt_identity, get_jwt_claims
+    jwt_required, create_access_token, get_jwt_identity, get_jwt_claims, get_raw_jwt
 )
 from app.models import db, Users
+from app import blacklist
 import bcrypt
 
 
@@ -69,3 +70,10 @@ def login():
     # return error
     return jsonify({'message':'Invalid email or password'})
         
+
+@bp.route('/logout',methods=['DELETE'])
+@jwt_required
+def logout():
+    jti = get_raw_jwt()['jti']
+    blacklist.add(jti)
+    return jsonify({"message":"Successfully logged out"}), 200
